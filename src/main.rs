@@ -40,6 +40,7 @@ impl Game {
     }
 }
 
+#[derive(PartialEq)]
 enum Direction {
     Left,
     Right,
@@ -70,19 +71,52 @@ impl Snake {
 
     fn update(&mut self) {
         match self.dir {
-            Direction::Left => self.pos_x -= 1,
-            Direction::Right => self.pos_x += 1,
-            Direction::Up => self.pos_y -= 1,
-            Direction::Down => self.pos_y += 1,
+            Direction::Left => {
+                if self.pos_x == 0 {
+                    self.pos_x = 9;
+                } else {
+                    self.pos_x -= 1
+                };
+            }
+            Direction::Right => {
+                if self.pos_x == 9 {
+                    self.pos_x = 0;
+                } else {
+                    self.pos_x += 1;
+                }
+            }
+            Direction::Up => {
+                if self.pos_y == 0 {
+                    self.pos_y = 9;
+                } else {
+                    self.pos_y -= 1;
+                }
+            }
+            Direction::Down => {
+                if self.pos_y == 9 {
+                    self.pos_y = 0;
+                } else {
+                    self.pos_y += 1;
+                }
+            }
         };
     }
 
     fn on_press(&mut self, args: &ButtonArgs) {
+        let current_direction: &Direction = &self.dir;
         match args.button {
-            Button::Keyboard(Key::Left) => self.dir = Direction::Left,
-            Button::Keyboard(Key::Right) => self.dir = Direction::Right,
-            Button::Keyboard(Key::Up) => self.dir = Direction::Up,
-            Button::Keyboard(Key::Down) => self.dir = Direction::Down,
+            Button::Keyboard(Key::Left) if current_direction != &Direction::Right => {
+                self.dir = Direction::Left
+            }
+            Button::Keyboard(Key::Right) if current_direction != &Direction::Left => {
+                self.dir = Direction::Right
+            }
+            Button::Keyboard(Key::Up) if current_direction != &Direction::Down => {
+                self.dir = Direction::Up
+            }
+            Button::Keyboard(Key::Down) if current_direction != &Direction::Up => {
+                self.dir = Direction::Down
+            }
             _ => (),
         }
     }
