@@ -3,7 +3,10 @@ extern crate graphics;
 extern crate opengl_graphics;
 extern crate piston;
 
+use std::collections::LinkedList;
+
 use glutin_window::GlutinWindow as Window;
+use graphics::types::Rectangle;
 use opengl_graphics::{GlGraphics, OpenGL};
 use piston::event_loop::{EventLoop, EventSettings, Events};
 use piston::input::{
@@ -19,8 +22,7 @@ struct Game {
 
 impl Game {
     fn render(&mut self, args: &RenderArgs) {
-        // use graphics;
-
+		// Sky blue
         let screen_color: [f32; 4] = [0.26, 0.89, 0.96, 0.9];
 
         self.gl.draw(args.viewport(), |_c, gl| {
@@ -48,58 +50,71 @@ enum Direction {
     Down,
 }
 
+#[derive(Clone)]
+struct Point {
+    x: i32,
+    y: i32,
+}
+
 struct Snake {
-    pos_x: i32,
-    pos_y: i32,
+    body: LinkedList<Point>,
     dir: Direction,
 }
 
 impl Snake {
     fn render(&mut self, gl: &mut GlGraphics, args: &RenderArgs) {
         let snake_color: [f32; 4] = [0.0, 1.0, 0.0, 0.9];
-        let cell_width = 20;
-        let x = self.pos_x * cell_width;
-        let y = self.pos_y * cell_width;
+        let cell_width: f64 = 20.0;
+        let squares: Vec<Rectangle> = self
+            .body
+            .iter()
+            .map(|&Point { x, y }| -> Rectangle {
+                graphics::rectangle::square(x as f64 * cell_width, y as f64 * cell_width, 20_f64)
+            })
+            .collect();
 
-        let square = graphics::rectangle::square(x as f64, y as f64, 20_f64);
+
         gl.draw(args.viewport(), |c, gl| {
             let transform = c.transform;
             // Draw the snake.
-            graphics::rectangle(snake_color, square, transform, gl);
+            squares
+                .into_iter()
+                .for_each(|square| graphics::rectangle(snake_color, square, transform, gl));
         });
     }
 
     fn update(&mut self) {
-        match self.dir {
-            Direction::Left => {
-                if self.pos_x == 0 {
-                    self.pos_x = 9;
-                } else {
-                    self.pos_x -= 1
-                };
-            }
-            Direction::Right => {
-                if self.pos_x == 9 {
-                    self.pos_x = 0;
-                } else {
-                    self.pos_x += 1;
-                }
-            }
-            Direction::Up => {
-                if self.pos_y == 0 {
-                    self.pos_y = 9;
-                } else {
-                    self.pos_y -= 1;
-                }
-            }
-            Direction::Down => {
-                if self.pos_y == 9 {
-                    self.pos_y = 0;
-                } else {
-                    self.pos_y += 1;
-                }
-            }
-        };
+		let mut new_head: Point = self.body.front().expect("Snake has no head!").clone();
+
+		match self.dir {
+			Direction::Left => {
+				match new_head {
+					Point { x: 0, .. } => new_head.x = 9,
+					_ => new_head.x -= 1,
+				}
+			}
+			Direction::Right => {
+				match new_head {
+					Point { x: 9, .. } => new_head.x = 0,
+					_ => new_head.x += 1,
+				}
+			}
+			Direction::Up => {
+				match new_head {
+					Point { y: 0, .. } => new_head.y = 9,
+					_ => new_head.y -= 1,
+				}
+			}
+			Direction::Down => {
+				match new_head {
+					Point { y: 9, .. } => new_head.y = 0,
+					_ => new_head.y += 1,
+				}
+			}
+		};
+
+		self.body.pop_back();
+		self.body.push_front(new_head);
     }
 
     fn on_press(&mut self, args: &ButtonArgs) {
@@ -135,8 +150,7 @@ fn main() {
     let mut game = Game {
         gl: GlGraphics::new(opengl),
         snake: Snake {
-            pos_x: 2,
-            pos_y: 5,
+            body: LinkedList::from([Point { x: 2, y: 5}, Point { x: 1, y: 5}]),
             dir: Direction::Right,
         },
     };
