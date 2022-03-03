@@ -2,7 +2,9 @@ extern crate glutin_window;
 extern crate graphics;
 extern crate opengl_graphics;
 extern crate piston;
+extern crate rand;
 
+use rand::{thread_rng, Rng};
 use std::collections::LinkedList;
 
 use glutin_window::GlutinWindow as Window;
@@ -18,11 +20,13 @@ use piston::window::WindowSettings;
 struct Game {
     gl: GlGraphics,
     snake: Snake,
+    food: Food,
+    score: i32,
 }
 
 impl Game {
     fn render(&mut self, args: &RenderArgs) {
-		// Sky blue
+        // Sky blue
         let screen_color: [f32; 4] = [0.26, 0.89, 0.96, 0.9];
 
         self.gl.draw(args.viewport(), |_c, gl| {
@@ -31,10 +35,21 @@ impl Game {
         });
 
         self.snake.render(&mut self.gl, &args);
+
+        self.food.render(&mut self.gl, &args);
     }
 
     fn update(&mut self) {
         self.snake.update();
+
+        if is_collision(self.snake.body.front().unwrap(), &self.food.coord) {
+            println!("Yum!");
+            // update score
+            self.score += 1;
+            println!("Score: {}", self.score);
+            // re-spawn food
+            self.food.spawn();
+        }
     }
 
     fn on_press(&mut self, args: &ButtonArgs) {
@@ -56,6 +71,10 @@ struct Point {
     y: i32,
 }
 
+fn is_collision(p1: &Point, p2: &Point) -> bool {
+    p1.x == p2.x && p1.y == p2.y
+}
+
 struct Snake {
     body: LinkedList<Point>,
     dir: Direction,
@@ -73,7 +92,6 @@ impl Snake {
             })
             .collect();
 
-
         gl.draw(args.viewport(), |c, gl| {
             let transform = c.transform;
             // Draw the snake.
@@ -84,37 +102,29 @@ impl Snake {
     }
 
     fn update(&mut self) {
-		let mut new_head: Point = self.body.front().expect("Snake has no head!").clone();
+        let mut new_head: Point = self.body.front().expect("Snake has no head!").clone();
 
-		match self.dir {
-			Direction::Left => {
-				match new_head {
-					Point { x: 0, .. } => new_head.x = 9,
-					_ => new_head.x -= 1,
-				}
-			}
-			Direction::Right => {
-				match new_head {
-					Point { x: 9, .. } => new_head.x = 0,
-					_ => new_head.x += 1,
-				}
-			}
-			Direction::Up => {
-				match new_head {
-					Point { y: 0, .. } => new_head.y = 9,
-					_ => new_head.y -= 1,
-				}
-			}
-			Direction::Down => {
-				match new_head {
-					Point { y: 9, .. } => new_head.y = 0,
-					_ => new_head.y += 1,
-				}
-			}
-		};
+        match self.dir {
+            Direction::Left => match new_head {
+                Point { x: 0, .. } => new_head.x = 9,
+                _ => new_head.x -= 1,
+            },
+            Direction::Right => match new_head {
+                Point { x: 9, .. } => new_head.x = 0,
+                _ => new_head.x += 1,
+            },
+            Direction::Up => match new_head {
+                Point { y: 0, .. } => new_head.y = 9,
+                _ => new_head.y -= 1,
+            },
+            Direction::Down => match new_head {
+                Point { y: 9, .. } => new_head.y = 0,
+                _ => new_head.y += 1,
+            },
+        };
 
-		self.body.pop_back();
-		self.body.push_front(new_head);
+        self.body.pop_back();
+        self.body.push_front(new_head);
     }
 
     fn on_press(&mut self, args: &ButtonArgs) {
@@ -137,6 +147,40 @@ impl Snake {
     }
 }
 
+struct Food {
+    coord: Point,
+}
+
+impl Food {
+	fn new() -> Food {
+		Food { coord: Point { x: 2, y: 5 } }
+	}
+
+    fn spawn(&mut self) {
+        let mut rng = thread_rng();
+        let x: i32 = rng.gen_range(0..9);
+        let y: i32 = rng.gen_range(0..9);
+
+		self.coord = Point { x, y };
+    }
+
+    fn render(&mut self, gl: &mut GlGraphics, args: &RenderArgs) {
+        let food_color: [f32; 4] = [1.0, 0.0, 0.0, 0.9];
+        let cell_width: f64 = 20.0;
+        let x = self.coord.x;
+        let y = self.coord.y;
+
+        let square: Rectangle =
+            graphics::rectangle::square(x as f64 * cell_width, y as f64 * cell_width, 20_f64);
+
+        gl.draw(args.viewport(), |c, gl| {
+            let transform = c.transform;
+            // Draw the food.
+            graphics::rectangle(food_color, square, transform, gl);
+        });
+    }
+}
+
 fn main() {
     let opengl = OpenGL::V3_2;
 
@@ -150,9 +194,11 @@ fn main() {
     let mut game = Game {
         gl: GlGraphics::new(opengl),
         snake: Snake {
-            body: LinkedList::from([Point { x: 2, y: 5}, Point { x: 1, y: 5}]),
+            body: LinkedList::from([Point { x: 2, y: 5 }, Point { x: 1, y: 5 }]),
             dir: Direction::Right,
         },
+        food: Food::new(),
+        score: 0,
     };
 
     let mut events = Events::new(EventSettings::new()).ups(8);
