@@ -12,8 +12,7 @@ use graphics::types::Rectangle;
 use opengl_graphics::{GlGraphics, OpenGL};
 use piston::event_loop::{EventLoop, EventSettings, Events};
 use piston::input::{
-    Button, ButtonArgs, ButtonEvent, ButtonState, Key, RenderArgs, RenderEvent, UpdateArgs,
-    UpdateEvent,
+    Button, ButtonArgs, ButtonEvent, ButtonState, Key, RenderArgs, RenderEvent, UpdateEvent,
 };
 use piston::window::WindowSettings;
 
@@ -49,6 +48,8 @@ impl Game {
             println!("Score: {}", self.score);
             // re-spawn food
             self.food.spawn();
+            // grow snake
+            self.snake.grow();
         }
     }
 
@@ -145,6 +146,20 @@ impl Snake {
             _ => (),
         }
     }
+
+    fn grow(&mut self) {
+        let mut new_tail: Point = self.body.back().expect("Snake has no tail!").clone();
+        let current_direction: &Direction = &self.dir;
+
+        match current_direction {
+            &Direction::Left => new_tail.x += 1,
+            &Direction::Right => new_tail.x -= 1,
+            &Direction::Up => new_tail.y += 1,
+            &Direction::Down => new_tail.y -= 1,
+        }
+
+        self.body.push_back(new_tail);
+    }
 }
 
 struct Food {
@@ -152,16 +167,18 @@ struct Food {
 }
 
 impl Food {
-	fn new() -> Food {
-		Food { coord: Point { x: 2, y: 5 } }
-	}
+    fn new() -> Food {
+        Food {
+            coord: Point { x: 2, y: 5 },
+        }
+    }
 
     fn spawn(&mut self) {
         let mut rng = thread_rng();
         let x: i32 = rng.gen_range(0..9);
         let y: i32 = rng.gen_range(0..9);
 
-		self.coord = Point { x, y };
+        self.coord = Point { x, y };
     }
 
     fn render(&mut self, gl: &mut GlGraphics, args: &RenderArgs) {
