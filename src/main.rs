@@ -16,11 +16,18 @@ use piston::input::{
 };
 use piston::window::WindowSettings;
 
+#[derive(PartialEq)]
+enum GameState {
+    Active,
+    Inactive,
+}
+
 struct Game {
     gl: GlGraphics,
     snake: Snake,
     food: Food,
     score: i32,
+    state: GameState,
 }
 
 impl Game {
@@ -39,22 +46,50 @@ impl Game {
     }
 
     fn update(&mut self) {
-        self.snake.update();
+        if self.state == GameState::Active {
+            self.snake.update();
 
-        if is_collision(self.snake.body.front().unwrap(), &self.food.coord) {
-            println!("Yum!");
-            // update score
-            self.score += 1;
-            println!("Score: {}", self.score);
-            // re-spawn food
-            self.food.spawn();
-            // grow snake
-            self.snake.grow();
+            if is_collision(self.snake.body.front().unwrap(), &self.food.coord) {
+                println!("Yum!");
+                // update score
+                self.score += 1;
+                println!("Score: {}", self.score);
+                // re-spawn food
+                self.food.spawn();
+                // grow snake
+                self.snake.grow();
+            }
+
+            if self.snake.will_die() {
+                self.end();
+            }
         }
     }
 
     fn on_press(&mut self, args: &ButtonArgs) {
         self.snake.on_press(&args);
+
+        if self.state == GameState::Inactive && args.button == Button::Keyboard(Key::Space) {
+            self.reset();
+        }
+    }
+
+    fn end(&mut self) {
+        println!("Game Over!");
+        println!("Score: {}", self.score);
+        print!("Play again? Hit the space bar.\n");
+
+        self.state = GameState::Inactive;
+    }
+
+    fn reset(&mut self) {
+        self.snake = Snake {
+            body: LinkedList::from([Point { x: 2, y: 5 }]),
+            dir: Direction::Right,
+        };
+        self.food.spawn();
+        self.score = 0;
+        self.state = GameState::Active;
     }
 }
 
@@ -160,6 +195,20 @@ impl Snake {
 
         self.body.push_back(new_tail);
     }
+
+    fn will_die(&mut self) -> bool {
+        let head = self.body.front().expect("Snake has no head!");
+        let mut iter = self.body.iter().skip(1);
+
+        let crash = iter.find(|&segment| is_collision(head, &segment));
+        match crash {
+            Some(_) => {
+                println!("Oh no!");
+                true
+            }
+            None => false,
+        }
+    }
 }
 
 struct Food {
@@ -211,11 +260,12 @@ fn main() {
     let mut game = Game {
         gl: GlGraphics::new(opengl),
         snake: Snake {
-            body: LinkedList::from([Point { x: 2, y: 5 }, Point { x: 1, y: 5 }]),
+            body: LinkedList::from([Point { x: 2, y: 5 }]),
             dir: Direction::Right,
         },
         food: Food::new(),
         score: 0,
+        state: GameState::Active,
     };
 
     let mut events = Events::new(EventSettings::new()).ups(8);
