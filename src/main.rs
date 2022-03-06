@@ -43,9 +43,10 @@ impl Game {
             graphics::clear(screen_color, gl);
         });
 
+        self.food.render(&mut self.gl, &args);
+
         self.snake.render(&mut self.gl, &args);
 
-        self.food.render(&mut self.gl, &args);
     }
 
     fn update(&mut self) {
@@ -253,7 +254,7 @@ impl Food {
 fn main() {
     let opengl = OpenGL::V3_2;
 
-    // Create an Glutin window.
+    // Create a Glutin window.
     let game_window: Window = WindowSettings::new("snake-game", [200, 200])
         .graphics_api(opengl)
         .exit_on_esc(true)
