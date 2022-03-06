@@ -1,20 +1,23 @@
+extern crate find_folder;
 extern crate glutin_window;
 extern crate graphics;
 extern crate opengl_graphics;
 extern crate piston;
+extern crate piston_window;
 extern crate rand;
 
 use rand::{thread_rng, Rng};
 use std::collections::LinkedList;
 
 use glutin_window::GlutinWindow as Window;
+use graphics::text;
 use graphics::types::Rectangle;
 use opengl_graphics::{GlGraphics, OpenGL};
 use piston::event_loop::{EventLoop, EventSettings, Events};
 use piston::input::{
     Button, ButtonArgs, ButtonEvent, ButtonState, Key, RenderArgs, RenderEvent, UpdateEvent,
 };
-use piston::window::WindowSettings;
+use piston_window::*;
 
 #[derive(PartialEq)]
 enum GameState {
@@ -251,11 +254,22 @@ fn main() {
     let opengl = OpenGL::V3_2;
 
     // Create an Glutin window.
-    let mut window: Window = WindowSettings::new("snake-game", [200, 200])
+    let game_window: Window = WindowSettings::new("snake-game", [200, 200])
         .graphics_api(opengl)
         .exit_on_esc(true)
         .build()
         .unwrap();
+
+    let mut text_window = PistonWindow::new(opengl, 8, game_window);
+
+    let assets = find_folder::Search::ParentsThenKids(3, 3)
+        .for_folder("assets")
+        .unwrap();
+    let mut glyphs = text_window
+        .load_font(assets.join("FiraSans-Regular.ttf"))
+        .unwrap();
+
+    text_window.set_lazy(true);
 
     let mut game = Game {
         gl: GlGraphics::new(opengl),
@@ -269,9 +283,46 @@ fn main() {
     };
 
     let mut events = Events::new(EventSettings::new()).ups(8);
-    while let Some(e) = events.next(&mut window) {
+    while let Some(e) = events.next(&mut text_window) {
         if let Some(args) = e.render_args() {
             game.render(&args);
+
+            text_window.draw_2d(&e, |c, g, device| {
+                let score = format!("{}", game.score);
+                text::Text::new_color([1.0, 1.0, 1.0, 1.0], 20)
+                    .draw(
+                        &score,
+                        &mut glyphs,
+                        &c.draw_state,
+                        c.transform.trans(180.0, 20.0),
+                        g,
+                    )
+                    .unwrap();
+
+                if game.state == GameState::Inactive {
+                    text::Text::new_color([1.0, 1.0, 1.0, 1.0], 32)
+                        .draw(
+                            "GAME OVER",
+                            &mut glyphs,
+                            &c.draw_state,
+                            c.transform.trans(10.0, 100.0),
+                            g,
+                        )
+                        .unwrap();
+
+                    text::Text::new_color([1.0, 1.0, 1.0, 1.0], 14)
+                        .draw(
+                            "Press space to play again.",
+                            &mut glyphs,
+                            &c.draw_state,
+                            c.transform.trans(20.0, 190.0),
+                            g,
+                        )
+                        .unwrap();
+                }
+                // Update glyphs before rendering.
+                glyphs.factory.encoder.flush(device);
+            });
         }
 
         if let Some(_args) = e.update_args() {
