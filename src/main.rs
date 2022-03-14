@@ -306,7 +306,7 @@ fn main() {
                             "GAME OVER",
                             &mut glyphs,
                             &c.draw_state,
-                            c.transform.trans(10.0, 100.0),
+                            c.transform.trans(20.0, 100.0),
                             g,
                         )
                         .unwrap();
