@@ -46,7 +46,6 @@ impl Game {
         self.food.render(&mut self.gl, &args);
 
         self.snake.render(&mut self.gl, &args);
-
     }
 
     fn update(&mut self) {
