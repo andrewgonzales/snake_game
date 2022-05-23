@@ -6,4 +6,4 @@ A snake game in Rust. Based on https://www.youtube.com/watch?v=HCwMb0KslX8.
 
 `cargo run`
 
-![Game demo]("assets/snake_game.gif")
+![Game demo](assets/snake_game.gif)
